@@ -7,16 +7,10 @@ class ExtraContentForm(forms.ModelForm):
     '''This model form handles extra content from a content type field
     The model must be an instance of :class:`ExtraContentModel`.
     '''    
-    def __init__(self, *args, **kwargs):
+    def __init__(self, data=None, **kwargs):
         instance = kwargs.get('instance',None)
-        if instance:
-            initial_extra = instance.extra_content()
-        else:
-            initial_extra = None
-        super(ExtraContentForm,self).__init__(*args, **kwargs)
-        kwargs['instance'] = initial_extra
-        self._args = args
-        self._kwargs = kwargs
+        self.initial_extra = None if not instance else instance.extra_content
+        super(ExtraContentForm,self).__init__(data=data, **kwargs)
         
     def is_valid(self):
         vi = super(ExtraContentForm,self).is_valid()
@@ -30,29 +24,33 @@ class ExtraContentForm(forms.ModelForm):
         return vi
     
     def content_form(self):
-        instance = self.instance
-        ct  = instance.content_type
-        #data = dict(self.data.items())
-        #ctt  = data.get('content_type',self.initial.get('content_type',None))
-        #if ctt:
-        #    ct = ContentType.objects.get(id = int(ctt))
-        if ct:
-            #pre_content   = kwargs.pop('instance',None)
-            content_model = ct.model_class()
-            #if isinstance(pre_content,content_model):
-            #    kwargs['instance'] = pre_content 
-            content_form  = modelform_factory(content_model)
-            return content_form(*self._args, **self._kwargs)
-        else:
-            return None
+        cf = getattr(self,'_content_form',False)
+        if cf is False:
+            instance = self.instance
+            ct  = instance.content_type
+            if ct:
+                model = ct.model_class()
+                content_form  = modelform_factory(model)
+                data  = self.data
+                instance = self.initial_extra
+                if instance and not isinstance(instance,model):
+                    opts = content_form._meta
+                    initial_extra = forms.model_to_dict(instance, opts.fields, opts.exclude)
+                    initial_extra.pop(model._meta.pk.attname,None)
+                    initial_extra.update(data)
+                    data = initial_extra
+                    instance = None
+                cf = content_form(data = data, instance = instance)
+            else:
+                cf = None
+            setattr(self,'_content_form',cf)
+        return cf
     
     def save(self, commit = True):
         obj = super(ExtraContentForm,self).save(commit = False)
         cf = self.content_form()
-        if cf:
-            obj.object_id = cf.save(commit = True).id
-        else:
-            obj.object_id = 0
+        new_extra = None if not cf else cf.save()
+        obj.set_content(new_extra,self.initial_extra)
         if commit:
             return super(ExtraContentForm,self).save(commit = commit)
         else:

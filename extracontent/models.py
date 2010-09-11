@@ -8,19 +8,13 @@ class ExtraContentBase(models.Model):
     '''
     extra_content_one2one = False
     object_id      = models.PositiveIntegerField(default = 0, editable = False)
-    _extra_content = generic.GenericForeignKey('content_type', 'object_id')
+    extra_content  = generic.GenericForeignKey('content_type', 'object_id')
     
     def __init__(self, *args, **kwargs):
         super(ExtraContentBase,self).__init__(*args, **kwargs)
     
     class Meta:
         abstract = True
-        
-    def extra_content(self):
-        try:
-            return self._extra_content
-        except:
-            return None
     
     @property
     def type(self):
@@ -33,14 +27,34 @@ class ExtraContentBase(models.Model):
         return False
         
     def save(self, **kwargs):
+        self.delete_cache()
         super(ExtraContentBase,self).save(**kwargs)
         if self._denormalize():
             self.extra_content().save()
-        
+            
+    def set_content(self, obj, old_obj = None):
+        old_obj = old_obj or self.extra_content
+        if obj is not old_obj:
+            if obj:
+                self.content_type = ContentType.objects.get_for_model(obj)
+                self.object_id = obj.pk
+            else:
+                self.content_type = None
+                self.object_id = 0
+            if old_obj and getattr(self.__class__,'_one2one',False):
+                old_obj.delete()
+    
+    def delete_cache(self):
+        for field in self._meta.virtual_fields:
+            try:
+                delattr(self,field.cache_attr)
+            except:
+                pass
+                
     @classmethod
     def delete_extra_content(cls, instance = None, **kwargs):
         if isinstance(instance,cls):
-            obj = instance.extra_content()
+            obj = instance.extra_content
             if obj:
                 obj.delete()
     
@@ -48,6 +62,7 @@ class ExtraContentBase(models.Model):
     def register_one2one(cls):
         '''Use this class method to register a one-to-one relationship with extra content'''
         from django.db.models import signals
+        setattr(cls,'_one2one',True)
         signals.pre_delete.connect(cls.delete_extra_content, sender = cls)
         
         
