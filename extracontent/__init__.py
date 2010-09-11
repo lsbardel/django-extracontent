@@ -13,3 +13,13 @@ __license__  = "BSD"
 __author__   = "Luca Sbardella"
 __contact__  = "luca.sbardella@gmail.com"
 __homepage__ = "http://github.com/lsbardel/django-extracontent"
+
+
+
+def content(name):
+    from django.contrib.contenttypes.models import ContentType
+    res = ContentType.objects.filter(model = name.lower())
+    if res.count() == 1:
+        return res[0]
+    else:
+        raise ValueError

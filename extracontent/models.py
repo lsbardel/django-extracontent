@@ -3,15 +3,15 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
 
 
-class ExtraContentModel(models.Model):
+class ExtraContentBase(models.Model):
     '''Abstract Model class for models with a dynamic content_type.
     '''
-    content_type   = models.ForeignKey(ContentType, blank=True, null=True)
+    #content_type   = models.ForeignKey(ContentType, blank=True, null=True)
     object_id      = models.PositiveIntegerField(default = 0, editable = False)
     _extra_content = generic.GenericForeignKey('content_type', 'object_id')
     
     def __init__(self, *args, **kwargs):
-        super(ExtraContentModel,self).__init__(*args, **kwargs)
+        super(ExtraContentBase,self).__init__(*args, **kwargs)
         self._new_content = None
     
     class Meta:
@@ -44,12 +44,21 @@ class ExtraContentModel(models.Model):
                 self.object_id = nc.id
         if not self.object_id:
             self.object_id = 0
-        super(ExtraContentModel,self).save(**kwargs)
+        super(ExtraContentBase,self).save(**kwargs)
         if nc:
             self._denormalize()
             nc.save()
             if self.object_id != nc.id:
                 self.object_id = nc.id
-                super(ExtraContentModel,self).save(**kwargs)
+                super(ExtraContentBase,self).save(**kwargs)
         self._extra_content = nc
         
+        
+class ExtraContent(ExtraContentBase):
+    '''Abstract Model class for models with a dynamic content_type.
+    '''
+    content_type   = models.ForeignKey(ContentType, blank=True, null=True)
+    
+    class Meta:
+        abstract = True
+
