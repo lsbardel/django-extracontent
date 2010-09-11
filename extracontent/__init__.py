@@ -1,5 +1,5 @@
 '''A django abstract model and form for handling extra content in a model.'''
-VERSION = (0, 1)
+VERSION = (0, 2, a1)
  
 def get_version():
     if len(VERSION) == 3:
