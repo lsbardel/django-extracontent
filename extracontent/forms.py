@@ -9,9 +9,12 @@ class ExtraContentForm(forms.ModelForm):
     '''    
     def __init__(self, *args, **kwargs):
         instance = kwargs.get('instance',None)
+        if instance:
+            initial_extra = instance.extra_content()
+        else:
+            initial_extra = None
         super(ExtraContentForm,self).__init__(*args, **kwargs)
-        instance = instance or self.instance
-        kwargs['instance'] = instance.extra_content()
+        kwargs['instance'] = initial_extra
         self._args = args
         self._kwargs = kwargs
         
@@ -28,7 +31,7 @@ class ExtraContentForm(forms.ModelForm):
     
     def content_form(self):
         instance = self.instance
-        ct = instance.content_type
+        ct  = instance.content_type
         #data = dict(self.data.items())
         #ctt  = data.get('content_type',self.initial.get('content_type',None))
         #if ctt:
@@ -47,7 +50,11 @@ class ExtraContentForm(forms.ModelForm):
         obj = super(ExtraContentForm,self).save(commit = False)
         cf = self.content_form()
         if cf:
-            obj._denormalize(cf.instance)
-            obj._new_content = cf.save(commit = False)
-        return super(ExtraContentForm,self).save(commit = commit)
+            obj.object_id = cf.save(commit = True).id
+        else:
+            obj.object_id = 0
+        if commit:
+            return super(ExtraContentForm,self).save(commit = commit)
+        else:
+            return obj
     

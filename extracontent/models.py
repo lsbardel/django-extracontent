@@ -6,13 +6,12 @@ from django.contrib.contenttypes import generic
 class ExtraContentBase(models.Model):
     '''Abstract Model class for models with a dynamic content_type.
     '''
-    #content_type   = models.ForeignKey(ContentType, blank=True, null=True)
+    extra_content_one2one = False
     object_id      = models.PositiveIntegerField(default = 0, editable = False)
     _extra_content = generic.GenericForeignKey('content_type', 'object_id')
     
     def __init__(self, *args, **kwargs):
         super(ExtraContentBase,self).__init__(*args, **kwargs)
-        self._new_content = None
     
     class Meta:
         abstract = True
@@ -30,28 +29,26 @@ class ExtraContentBase(models.Model):
         else:
             return ''
         
-    def _denormalize(self, ec = None):
-        pass
+    def _denormalize(self):
+        return False
         
     def save(self, **kwargs):
-        nc = self._new_content
-        if nc:
-            ec = self.extra_content()
-            if ec and ec != nc:
-                ec.delete()
-            self.content_type = ContentType.objects.get_for_model(nc)
-            if nc.id:
-                self.object_id = nc.id
-        if not self.object_id:
-            self.object_id = 0
         super(ExtraContentBase,self).save(**kwargs)
-        if nc:
-            self._denormalize()
-            nc.save()
-            if self.object_id != nc.id:
-                self.object_id = nc.id
-                super(ExtraContentBase,self).save(**kwargs)
-        self._extra_content = nc
+        if self._denormalize():
+            self.extra_content().save()
+        
+    @classmethod
+    def delete_extra_content(cls, instance = None, **kwargs):
+        if isinstance(instance,cls):
+            obj = instance.extra_content()
+            if obj:
+                obj.delete()
+    
+    @classmethod
+    def register_one2one(cls):
+        '''Use this class method to register a one-to-one relationship with extra content'''
+        from django.db.models import signals
+        signals.pre_delete.connect(cls.delete_extra_content, sender = cls)
         
         
 class ExtraContent(ExtraContentBase):
