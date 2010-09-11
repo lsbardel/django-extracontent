@@ -1,9 +1,13 @@
 
+:Dowloads: http://pypi.python.org/pypi/django-extracontent/
+:Source: http://github.com/lsbardel/django-extracontent
+:Keywords: django, database
+
+--
+
 A django abstract model and form for handling extra content in a model.
 
-
-
-Let's say we have a model ``MyData`` which can refers to different underlying
+Let's say we have a model ``MyData`` which can refers two different underlying
 data types::
 	
 	from django.db import models

@@ -12,13 +12,13 @@ from extracontent.tests.models import MainModelForm, MainModelForm2
 
 class TestExtraContent(TestCase):
     
-    def get_form(self, data = None, instance = None):
-        return MainModelForm(data = data, instance = instance)
+    def get_form(self, data = None, instance = None, one2one = False):
+        if one2one:
+            return MainModelForm2(data = data, instance = instance)
+        else:
+            return MainModelForm(data = data, instance = instance)
     
-    def get_form2(self, data = None, instance = None):
-        return MainModelForm2(data = data, instance = instance)
-    
-    def testAddWithNoExtraContent(self):
+    def _AddWithNoExtraContent(self, one2one = False):
         data = {}
         form = self.get_form(data = data)
         self.assertFalse(form.is_valid())
@@ -32,7 +32,7 @@ class TestExtraContent(TestCase):
         self.assertTrue(elem.id)
         self.assertTrue(elem.extra_content() is None)
         
-    def testAddWithExtraContent(self):
+    def _AddWithExtraContent(self, one2one = False):
         data = {'content_type':content('extradata1').id}
         form = self.get_form(data = data)
         self.assertFalse(form.is_valid())
@@ -51,13 +51,15 @@ class TestExtraContent(TestCase):
         self.assertTrue(isinstance(elem.extra_content(),ExtraData1))
         self.assertTrue(elem.extra_content().id)
         
-    def testEditNoContent2Content(self):
+    def _EditNoContent2Content(self, one2one = False):
         '''Add a new equity instrument. Testing the all process.'''
-        elem = self.get_form(data = {'name':'Luca'}).save()
+        elem = self.get_form(one2one = one2one,
+                             data = {'name':'Luca'}).save()
         self.assertTrue(elem.id)
         self.assertTrue(elem.extra_content() is None)
         self.assertEqual(elem.name,'Luca')
-        form = self.get_form(instance = elem,
+        form = self.get_form(one2one = one2one,
+                             instance = elem,
                              data = {'name':'Joshua',
                                      'content_type':content('extradata2').id,
                                      'dt':date.today()})
@@ -69,15 +71,17 @@ class TestExtraContent(TestCase):
         self.assertTrue(isinstance(elem.extra_content(),ExtraData2))
         self.assertTrue(elem.extra_content().id)
     
-    def testEditContent2NoContent(self):
+    def _EditContent2NoContent(self, one2one = False):
         '''Add a new equity instrument. Testing the all process.'''
-        elem = self.get_form(data = {'name':'Luca',
+        elem = self.get_form(one2one = one2one,
+                             data = {'name':'Luca',
                                      'content_type':content('extradata2').id,
                                      'dt':date.today()}).save()
         self.assertTrue(elem.id)
         self.assertTrue(isinstance(elem.extra_content(),ExtraData2))
         self.assertEqual(elem.name,'Luca')
-        form = self.get_form(instance = elem,
+        form = self.get_form(one2one = one2one,
+                             instance = elem,
                              data = {'name':'Joshua',
                                      'dt':date.today(),
                                      'content_type':''})
@@ -89,20 +93,60 @@ class TestExtraContent(TestCase):
         self.assertEqual(elem.name, 'Joshua')
         self.assertTrue(elem.extra_content() is None)
         
-    def testSignal(self):
+    def _EditContent2Content(self, one2one = False):
+        '''Add a new equity instrument. Testing the all process.'''
+        elem = self.get_form(one2one = one2one,
+                             data = {'name':'Luca',
+                                     'content_type':content('extradata2').id,
+                                     'dt':date.today()}).save()
+        self.assertTrue(elem.id)
+        self.assertTrue(isinstance(elem.extra_content(),ExtraData2))
+        self.assertEqual(elem.name,'Luca')
+        form = self.get_form(one2one = one2one,
+                             instance = elem,
+                             data = {'name':'Joshua',
+                                     'description':'bla bla bla',
+                                     'content_type':content('extradata1').id})
+        self.assertTrue(form.is_valid())
+        cf = form.content_form()
+        self.assertTrue(cf)
+        elem2 = form.save()
+        self.assertEqual(elem.id,elem2.id)
+        elem = MainModel.objects.get(id = elem.id)
+        self.assertEqual(elem.name, 'Joshua')
+        self.assertTrue(isinstance(elem.extra_content(),ExtraData1))
+        
+    def _Signal(self, one2one = False):
         data = {'name':'Luca',
                 'content_type':content('extradata2').id,
                 'dt':date.today()}
-        elem = self.get_form(data = data).save()
+        elem = self.get_form(data = data, one2one = one2one).save()
         obj = elem.extra_content()
         self.assertTrue(isinstance(obj,ExtraData2))
         elem.delete()
-        self.assertTrue(ExtraData2.objects.get(id = obj.id))
+        N = ExtraData2.objects.filter(id = obj.id).count()
+        if one2one:
+            self.assertEqual(N,0)
+        else:
+            self.assertEqual(N,1)        
         
-        elem = self.get_form2(data = data).save()
-        obj = elem.extra_content()
-        self.assertTrue(isinstance(obj,ExtraData2))
-        elem.delete()
-        self.assertEqual(ExtraData2.objects.filter(id = obj.id).count(),0)
+    def testAddWithNoExtraContent(self):
+        self._AddWithNoExtraContent()
+        self._AddWithNoExtraContent(one2one = True)
         
-    
+    def testEditContent2NoContent(self):
+        self._EditContent2NoContent()
+        self._EditContent2NoContent(one2one = True)
+        
+    def testEditNoContent2Content(self):
+        self._EditNoContent2Content()
+        self._EditNoContent2Content(one2one = True)
+        
+    def testEditContent2Content(self):
+        self._EditContent2Content()
+        self._EditContent2Content(one2one = True)
+        
+    def testSignal(self):
+        self._Signal()
+        self._Signal(one2one = True)
+        
