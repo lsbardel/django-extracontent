@@ -1,4 +1,3 @@
-
 :Dowloads: http://pypi.python.org/pypi/django-extracontent/
 :Source: http://github.com/lsbardel/django-extracontent
 :Keywords: django, database
