@@ -10,6 +10,7 @@ class ExtraContentForm(forms.ModelForm):
     def __init__(self, data=None, **kwargs):
         instance = kwargs.get('instance',None)
         self.original_initial = kwargs.get('initial',None)
+        self.original_data = data
         self.initial_extra = None if not instance else instance.extra_content
         super(ExtraContentForm,self).__init__(data=data, **kwargs)
         
@@ -27,9 +28,11 @@ class ExtraContentForm(forms.ModelForm):
     def content_form(self):
         cf = getattr(self,'_content_form',False)
         if cf is False:
+            data     = self.original_data
             initial  = self.original_initial
             instance = self.instance
-            data     = self.data
+            # If it is abound form we check the data first,
+            # otherwise the initial, last the instance
             if self.is_bound:
                 ct  = self._raw_value('content_type')
             elif initial:

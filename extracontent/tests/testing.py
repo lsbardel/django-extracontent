@@ -176,7 +176,8 @@ class TestExtraContent(TestCase):
                 'content_type':content('extradata1').id,
                 'description':text}
         elem = self.get_form(data = data, one2one = one2one).save()
-        form = self.get_form(data = {}, instance = elem)
+        form = self.get_form(instance = elem)
+        self.assertTrue(isinstance(form.initial_extra,ExtraData1))
         cform = form.content_form()
         self.assertTrue(cform)
         self.assertTrue(cform.instance.pk)
