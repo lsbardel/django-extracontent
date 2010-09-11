@@ -4,9 +4,10 @@ from distutils.command.install import INSTALL_SCHEMES
 import os
 import sys
 
-package_name  = 'extracontent'
-root_dir      = os.path.split(os.path.abspath(__file__))[0]
-package_dir   = os.path.join(root_dir, package_name) 
+package_name     = 'extracontent'
+package_fullname = 'django-%s' % package_name
+root_dir         = os.path.split(os.path.abspath(__file__))[0]
+package_dir      = os.path.join(root_dir, package_name) 
 
 def get_module():
     if root_dir not in sys.path:
@@ -85,7 +86,7 @@ if len(sys.argv) > 1 and sys.argv[1] == 'bdist_wininst':
 
 
 setup(
-        name         = package_name,
+        name         = package_fullname,
         version      = mod.get_version(),
         author       = mod.__author__,
         author_email = mod.__contact__,
