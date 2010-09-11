@@ -9,7 +9,7 @@ class ExtraContentForm(forms.ModelForm):
     '''    
     def __init__(self, data=None, **kwargs):
         instance = kwargs.get('instance',None)
-        self.original_initial = kwargs.get('initial',{})
+        self.original_initial = kwargs.get('initial',None)
         self.initial_extra = None if not instance else instance.extra_content
         super(ExtraContentForm,self).__init__(data=data, **kwargs)
         
@@ -27,12 +27,15 @@ class ExtraContentForm(forms.ModelForm):
     def content_form(self):
         cf = getattr(self,'_content_form',False)
         if cf is False:
-            initial = self.original_initial
+            initial  = self.original_initial
             instance = self.instance
+            data     = self.data
             if self.is_bound:
-                ct  = self.data.get('content_type',None)
-            else:
+                ct  = self._raw_value('content_type')
+            elif initial:
                 ct  = initial.get('content_type',None)
+            else:
+                ct = None
             if not ct:
                 ct  = instance.content_type
             else:
@@ -43,17 +46,18 @@ class ExtraContentForm(forms.ModelForm):
             if ct:
                 model = ct.model_class()
                 content_form  = modelform_factory(model)
-                data  = None if not self.is_bound else self.data
                 instance = self.initial_extra
                 if instance and not isinstance(instance,model):
                     opts = content_form._meta
                     initial_extra = forms.model_to_dict(instance, opts.fields, opts.exclude)
+                    #Remove the id
                     initial_extra.pop(model._meta.pk.attname,None)
                     if data is not None:
-                        initial_extra.update(data)
+                        initial_extra.update(dict(data.items()))
                         data = initial_extra
                     else:
-                        initial_extra.update(initial)
+                        if initial:
+                            initial_extra.update(initial)
                         initial = initial_extra
                     instance = None
                 cf = content_form(data = data, instance = instance, initial = initial)

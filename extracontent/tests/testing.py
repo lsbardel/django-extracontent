@@ -168,7 +168,21 @@ class TestExtraContent(TestCase):
         if one2one:
             self.assertEqual(N,0)
         else:
-            self.assertEqual(N,1)        
+            self.assertEqual(N,1)
+            
+    def _Instance(self, one2one = False):
+        text = 'bla bla bla'
+        data = {'name':'Luca',
+                'content_type':content('extradata1').id,
+                'description':text}
+        elem = self.get_form(data = data, one2one = one2one).save()
+        form = self.get_form(data = {}, instance = elem)
+        cform = form.content_form()
+        self.assertTrue(cform)
+        self.assertTrue(cform.instance.pk)
+        self.assertTrue(isinstance(cform.instance,ExtraData1))
+        html = cform.as_table()
+        self.assertTrue(text in html)        
         
     def testAddWithNoExtraContent(self):
         self._AddWithNoExtraContent()
@@ -199,4 +213,10 @@ class TestExtraContent(TestCase):
         
     def testSignalOne2One(self):
         self._Signal(one2one = True)
+        
+    def testInstance(self):
+        self._Instance()
+        
+    def testInstanceOne2One(self):
+        self._Instance(one2one = True)
         

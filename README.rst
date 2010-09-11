@@ -7,25 +7,24 @@
 
 A django abstract model and form for handling extra content in a model.
 
-Let's say we have a model ``MyData`` which can refers two different underlying
-data types::
+Let's say we have a model ``MyData`` which can point to different underlying data types::
 	
 	from django.db import models
 	from extracontent.models import ExtraContent
 	from extracontent.forms import ExtraContentForm
 	
 	class DataModel1(models.Model):
-		value = models.TextField()
+	    value = models.TextField()
 		
 	class DataModel2(models.Model):
-		dt = models.DateField()
+	    dt = models.DateField()
 		
 	class MyData(ExtraContent):
-		 name = models.CharField(max_length = 20)
+	    name = models.CharField(max_length = 20)
 	
 	class MyDataForm(ExtraContentForm):
-		class Meta:
-		model = MyData
+	    class Meta:
+	        model = MyData
 	
 	
 Then we can do this::
