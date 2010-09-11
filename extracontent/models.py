@@ -23,14 +23,14 @@ class ExtraContentBase(models.Model):
         else:
             return ''
         
-    def _denormalize(self):
+    def _denormalise(self, obj = None):
         return False
         
     def save(self, **kwargs):
         self.delete_cache()
         super(ExtraContentBase,self).save(**kwargs)
-        if self._denormalize():
-            self.extra_content().save()
+        if self._denormalise():
+            self.extra_content.save()
             
     def set_content(self, obj, old_obj = None):
         old_obj = old_obj or self.extra_content

@@ -9,6 +9,7 @@ class ExtraContentForm(forms.ModelForm):
     '''    
     def __init__(self, data=None, **kwargs):
         instance = kwargs.get('instance',None)
+        self.original_initial = kwargs.get('initial',{})
         self.initial_extra = None if not instance else instance.extra_content
         super(ExtraContentForm,self).__init__(data=data, **kwargs)
         
@@ -26,33 +27,51 @@ class ExtraContentForm(forms.ModelForm):
     def content_form(self):
         cf = getattr(self,'_content_form',False)
         if cf is False:
+            initial = self.original_initial
             instance = self.instance
-            ct  = instance.content_type
+            if self.is_bound:
+                ct  = self.data.get('content_type',None)
+            else:
+                ct  = initial.get('content_type',None)
+            if not ct:
+                ct  = instance.content_type
+            else:
+                try:
+                    ct = ContentType.objects.get(id = ct)
+                except:
+                    ct = None
             if ct:
                 model = ct.model_class()
                 content_form  = modelform_factory(model)
-                data  = self.data
+                data  = None if not self.is_bound else self.data
                 instance = self.initial_extra
                 if instance and not isinstance(instance,model):
                     opts = content_form._meta
                     initial_extra = forms.model_to_dict(instance, opts.fields, opts.exclude)
                     initial_extra.pop(model._meta.pk.attname,None)
-                    initial_extra.update(data)
-                    data = initial_extra
+                    if data is not None:
+                        initial_extra.update(data)
+                        data = initial_extra
+                    else:
+                        initial_extra.update(initial)
+                        initial = initial_extra
                     instance = None
-                cf = content_form(data = data, instance = instance)
+                cf = content_form(data = data, instance = instance, initial = initial)
             else:
                 cf = None
             setattr(self,'_content_form',cf)
         return cf
     
     def save(self, commit = True):
-        obj = super(ExtraContentForm,self).save(commit = False)
-        cf = self.content_form()
-        new_extra = None if not cf else cf.save()
-        obj.set_content(new_extra,self.initial_extra)
-        if commit:
-            return super(ExtraContentForm,self).save(commit = commit)
-        else:
+        obj = super(ExtraContentForm,self).save(commit = commit)
+        if not commit:
             return obj
+        cf = self.content_form()
+        if cf:
+            obj._denormalise(cf.instance)
+            new_extra = cf.save()
+        else:
+            new_extra = None
+        obj.set_content(new_extra,self.initial_extra)
+        return super(ExtraContentForm,self).save(commit = commit)
     
